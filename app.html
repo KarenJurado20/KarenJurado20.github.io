@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Ganado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group button {
+            width: 100%;
+            max-width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #218838;
+        }
+        .results-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: #fff;
+            width: calc(33.333% - 10px);
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .card img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Registrar Ganado</h1>
+        <form id="ganadoForm" class="form-group">
+            <label for="nombre">Nombre:</label>
+            <input type="text" id="nombre" name="nombre" required>
+
+            <label for="fecha">Fecha:</label>
+            <input type="date" id="fecha" name="fecha" required>
+
+            <label for="dueño">Dueño:</label>
+            <input type="text" id="dueño" name="dueño" required>
+
+            <label for="hijo">Hijo/a de:</label>
+            <input type="text" id="hijo" name="hijo" required>
+
+            <label for="foto">Foto:</label>
+            <div class="form-group">
+                <input type="file" id="foto" name="foto" accept="image/*" required>
+                <button type="submit">Registrar</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="container">
+        <h1>Buscar Ganado</h1>
+        <div class="form-group">
+            <label for="busquedaNombre">Nombre:</label>
+            <input type="text" id="busquedaNombre" placeholder="Buscar por nombre...">
+            
+            <label for="busquedaFecha">Fecha:</label>
+            <input type="date" id="busquedaFecha">
+            
+            <label for="busquedaDueño">Dueño:</label>
+            <input type="text" id="busquedaDueño" placeholder="Buscar por dueño...">
+            
+            <label for="busquedaHijo">Hijo/a de:</label>
+            <input type="text" id="busquedaHijo" placeholder="Buscar por hijo/a de...">
+            
+            <button onclick="buscarGanado()">Buscar</button>
+        </div>
+        <div id="resultados" class="results-container"></div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx0-pPBdbVGtqCs7aqdw1AAiYDfterQpIFuJ07QWXCw7MAeBZfS3R436Ig5rBBy0_iFjA/exec';
+
+        document.getElementById('ganadoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const file = formData.get('foto');
+            const reader = new FileReader();
+
+            reader.onloadend = function() {
+                const object = {
+                    nombre: formData.get('nombre'),
+                    fecha: formData.get('fecha'),
+                    dueño: formData.get('dueño'),
+                    hijo: formData.get('hijo'),
+                    foto: reader.result.split(',')[1]
+                };
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(object)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.result === 'success') {
+                        alert('¡Registro exitoso!');
+                        document.getElementById('ganadoForm').reset();
+                    } else {
+                        alert('Error al registrar');
+                    }
+                })
+                .catch(console.error);
+            };
+
+            reader.readAsDataURL(file);
+        });
+
+        function buscarGanado() {
+            const nombre = document.getElementById('busquedaNombre').value;
+            const fecha = document.getElementById('busquedaFecha').value;
+            const dueño = document.getElementById('busquedaDueño').value;
+            const hijo = document.getElementById('busquedaHijo').value;
+            
+            const query = new URLSearchParams({
+                nombre: nombre,
+                fecha: fecha,
+                dueño: dueño,
+                hijo: hijo
+            }).toString();
+
+            fetch(`${SCRIPT_URL}?${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultados = document.getElementById('resultados');
+                    resultados.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(vaca => {
+                            const div = document.createElement('div');
+                            div.className = 'card';
+                            
+                            // Formateo de la fecha
+                            const fechaFormateada = new Date(vaca.fecha).toISOString().split('T')[0];
+                            
+                            div.innerHTML = `
+                                <h3>${vaca.nombre}</h3>
+                                <p>Fecha: ${fechaFormateada}</p>
+                                <p>Dueño: ${vaca.dueño}</p>
+                                <p>Hijo/a de: ${vaca.hijo}</p>
+                                <img src="data:image/png;base64,${vaca.foto}" alt="${vaca.nombre}">
+                            `;
+                            resultados.appendChild(div);
+                        });
+                    } else {
+                        resultados.innerHTML = 'No se encontraron resultados.';
+                    }
+                })
+                .catch(console.error);
+        }
+    </script>
+</body>
+</html>
